@@ -1,4 +1,4 @@
-# The files relevant to the study are:
+## The files relevant to the study are:
 *fem_beam.m, which generates the Timoshenko beam FEM model,
 *beam_mor_pmor, which is the actual application of the MOR and pMOR methods on the model
 *soirka folder, which contains the implementation of the MOR subspace algorithm
