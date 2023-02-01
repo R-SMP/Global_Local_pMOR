@@ -94,11 +94,14 @@ a=1+6*(i-1):6*(i+1);
 K(a,a) = K(a,a) + Ke;
 M(a,a) = M(a,a) + Me;
 end
+
 % boundary condition
 K(1:6,:)=[]; K(:,1:6)=[];
 M(1:6,:)=[]; M(:,1:6)=[];
+
 % dampening matrix
 D = d1*K + d2*M ;
+
 % global load and output vectors
 B=zeros(6*N,1); C=zeros(1,6*N);
 B(N*6-3,1)=-1; % input: beam tip, -z

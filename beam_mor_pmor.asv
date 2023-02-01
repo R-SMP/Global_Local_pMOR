@@ -122,12 +122,10 @@ xlabel('Frequency (rad/s)')
 %% pMOR - Choose and initaliaze parameter space
 
 
-%Parameter is length, switch to height later
+%Parameter is le
 
 
 %% Global pMOR
-
-
 
 
 

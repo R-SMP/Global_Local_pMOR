@@ -4,19 +4,17 @@ function [Kr, Gr, Mr, Br, Cr, s] = SO_IRKA_SISO(K, G, M, B, C, s, proj, tol, max
 %           M : mass matrix
 %           G : damping matrix
 %           K : stiffness matrix
-%           C : not sure what it is, but it comes into play when projection is two sided 
+%           C : solution matrix, picks out tip displacement DOF 
 %           s : initial expansion points  %in IRKA they are assumed to be
 %           imaginary
-%           tol : convergence tolerance %use same error as in Exercise 3.2
-%           proj : projection method (one-sided, two-sided) %Not sure about
-%           this
-%           maxiter : max number of iterations %10 was the number in Ex
-%           3.2, but this could be a nice parametric study
+%           tol : convergence tolerance 
+%           maxiter : max number of iterations 
 
 if ~(strcmpi(proj, 'os') || strcmpi(proj, 'ts'))
     error('unknown projection method')
 end
 
+s = [s conj(s)];
 s = s(:);
 r = length(s);
 s = cplxpair(s); % sorts the elements along different dimensions of a complex array, grouping together complex conjugate pairs
@@ -131,7 +129,7 @@ Mr = Wr' * M * Vr;
 Gr = Wr' * G * Vr;
 Kr = Wr' * K * Vr;
 Br = Wr' * B;
-Cr = C * Vr; %Not necessary unless in two sided projection
+Cr = C * Vr;
 % hold off
 
 end
