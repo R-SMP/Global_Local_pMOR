@@ -1,4 +1,4 @@
-function [Kr, Gr, Mr, Br, Cr, s] = SO_IRKA_SISO(K, G, M, B, C, s, proj, tol, maxiter)
+function [Kr, Gr, Mr, Br, Cr, s, Vr] = SO_IRKA_SISO(K, G, M, B, C, s, proj, tol, maxiter)
 %SO_IRKA_SISO_us SO-IRKA with adaptive order
 %   Inputs: M, G, K, B, C : system
 %           M : mass matrix
@@ -25,7 +25,7 @@ Wr = zeros(size(M,1),r);
 %V = zeros(length(B),length(s));
 
 %Compute initial basis
-fprintf('Starting initial basis computation...')
+%fprintf('Starting initial basis computation...')
 timer_initial = tic;
 
 %Alternative

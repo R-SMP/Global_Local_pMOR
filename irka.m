@@ -1,4 +1,4 @@
-function [Mr, Dr, Kr, fr, Cr, s0] = irka(M, D, K, f, C, s0, tol, maxiter)
+function [Mr, Dr, Kr, fr, Cr, s0, V] = irka(M, D, K, f, C, s0, tol, maxiter)
 %irka Simple implementation of IRKA algorithm as seen in Exercise 3.2
 %   Inputs: M, D, K, f, C, s0, tol, maxiter : system
 %           M : mass matrix
