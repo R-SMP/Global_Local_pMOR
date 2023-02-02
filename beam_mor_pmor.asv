@@ -260,7 +260,7 @@ k = length(P);
 
 V = []; %Not sure if this is effective or if preallocating would be better
 
-%This matrices will store the reduced system matrices for each parameter
+%These matrices will store the reduced system matrices for each parameter
 %value
 Mp = [];
 Dp = [];
@@ -273,36 +273,56 @@ for i = 1:k
     %Create model matrices for that parameter
     [M, D, K, f, C] = fem_beam(P(i),10);
 
-    Mp = [M, Mr];
+    %Mp = [Mp, Mr];
 
 
-    %Obtain basis matrix for that parameter
-    [~, ~, ~, ~, ~, ~, Vr] = SO_IRKA_SISO(K, D, M, f, C, s0, 'os', tol, maxiter);
+    %Obtain basis matrix and reduced system matrices for that parameter
+    [Kr, Dr, Mr, fr, Cr, sr, Vr] = SO_IRKA_SISO(K, D, M, f, C, s0, 'os', tol, maxiter);
 
     %Concatenate
     V = [V, Vr];
 
-    Mp = [M, Mr];
-    Dp = [D, Dr];
-    Kp = [K, Kr];
-    fp = [f, fr];
-    Cp = [C, Cr];
+    Mp = [Mp, Mr];
+    Dp = [Dp, Dr];
+    Kp = [Kp, Kr];
+    fp = [fp, fr];
+    Cp = [Cp, Cr];
         
 end
 
 %Perform SVD to obtain r most significant basis vectors
 [U, S, Vsd] = svd(V);
 
-r = length(s0);
+r = 2*length(s0); %Remember the SO-IRKA algorithm doubles r
 
 R = U(:,1:r);
 
 %Transform reduced system matrices to generalized coordinate system R
 
-for i = 1:k
-    
-    T = R'*V(:,(1:r)) %Figure out proper index distribution
+Mgp = [];
+Dgp = [];
+Kgp = [];
+fgp = [];
+Cgp = [];
 
+for i = 1:k
+
+    Vrt  = V(:,((k-1)*r + 1):k*r);
+    
+    T = inv(R'*V(:,((k-1)*r + 1):k*r));
+
+    M_tilde_k = Mp(:,((k-1)*r + 1 ):k*r);
+    D_tilde_k = T'*Dp(:,((k-1)*r + 1):k*r)*T;
+    K_tilde_k = T'*Kp(:,((k-1)*r + 1):k*r)*T;
+    f_tilde_k = T'*fp(:,((k-1)*r + 1):k*r);
+    C_tilde_k = Cp();
+
+    Mgp = [Mgp, M_tilde_k];
+    Dgp = [Dgp, M_tilde_k];
+    Kgp = [Kgp, M_tilde_k];
+    fgp = [fgp, M_tilde_k];
+    Cgp = [Cgp, M_tilde_k];
+% 
 end
 
 
