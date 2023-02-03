@@ -337,9 +337,9 @@ end
 %Array with one row for each the solution for each parameter value, columns
 %are the frequency values
 result_interpolate = zeros(k,length(s));
-for jj = 1:k
-    for ii=1:length(s)
-        result_interpolate(jj,ii) = Cp(i,:) * ((s(ii)^2*Mgp(:,((i-1)*r + 1):i*r) + s(ii)*Dgp(:,((i-1)*r + 1):i*r) + Kgp(:,((i-1)*r + 1):i*r)) \ fp(:,i));
+for j = 1:k
+    for i=1:length(s)
+        result_interpolate(j,i) = Cp(j,:) * ((s(i)^2*Mgp(:,((j-1)*r + 1):j*r) + s(i)*Dgp(:,((j-1)*r + 1):j*r) + Kgp(:,((j-1)*r + 1):j*r)) \ fp(:,j));
         %Careful, s should be the initial frequency range, not the eigenvalues
         %obtained from IRKA
     end
@@ -351,20 +351,25 @@ p = [0.1 0.45 0.9 1.10 1 1.5];
 
 
 result_local = zeros(length(p),length(s));
-for jj = 1:length(p)
-    for ii=1:length(s) %s should not be involved in interpolation
+for j = 1:length(p)
+    for i=1:length(s) %s should not be involved in interpolation
         
-        result_local(:,ii) = spline(P,result_interpolate(:,ii),p);
-        %result is interpolated 
+        result_local(:,i) = spline(P,result_interpolate(:,i),p);
+        %result is interpolated for each frequency taking the parameter
+        %space as X and the result for that generalized coordinate system
+        %result as Y. Putting these together leads to complete interpolated
+        %version for entire frequency range for that certain parameter in
+        %from the p parameter range (range for which we want to obtain
+        %interpolated results). We do this for each parameter in p.
 
     end
 end
 
 
 %Plot reponse using INTERPOLATION OF LOCAL MATRICES
-fig = figure('Name','Frequency response using Local MOR');
+fig = figure('Name','Frequency response using local pMOR');
 set(fig,'defaulttextinterpreter','latex')
-semilogy(abs(s),abs(result_local(5,:))) %Row 5 contains result for L = 1 m
+semilogy(abs(s),abs(result_local(4,:))) %Row 5 contains result for L = 1 m
 xlim([0 10000])
 ylim([1e-8 1e-1])
 title('Global MOR')
@@ -376,11 +381,11 @@ fig = figure('Name','Frequency response comparison inc. local');
 set(fig,'defaulttextinterpreter','latex')
 semilogy(abs(s),abs(result_full), 'LineWidth', 10)
 hold on
-semilogy(abs(s),abs(result_irka), 'LineWidth', 8)
+semilogy(abs(s),abs(result_irka), 'LineWidth', 7)
 hold on
-semilogy(abs(s),abs(result_global), 'LineWidth', 4)
+semilogy(abs(s),abs(result_global), 'LineWidth', 3)
 hold on
-semilogy(abs(s),abs(result_local(5,:)), 'LineWidth', 2)
+semilogy(abs(s),abs(result_local(5,:)), 'LineWidth', 1)
 xlim([0 10000])
 ylim([1e-8 1e-1])
 legend('Full', 'SO-IRKA', 'Global MOR', 'Local MOR')

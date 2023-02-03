@@ -36,7 +36,7 @@ semilogy(abs(s),abs(result_full))
 xlim([0 10000])
 ylim([1e-8 1e-1])
 legend('Response')
-title('Harmonic response of a clamped plate')
+title('Frequency response, full solution')
 ylabel('Displacement at load point')
 xlabel('Frequency (rad/s)')
 
@@ -91,7 +91,7 @@ semilogy(abs(s),abs(result_irka))
 xlim([0 10000])
 ylim([1e-8 1e-1])
 legend('Response')
-title('Harmonic response of a clamped plate')
+title('Frequency response using IRKA')
 ylabel('Displacement at load point')
 xlabel('Frequency (rad/s)')
 
@@ -117,17 +117,6 @@ xlabel('Frequency (rad/s)')
 
 % fprintf("Error norm for IRKA: %.3e\n", ...
 %     error_norm_irka);
-
-% %% Wth
-% 
-% tol = 1e-10;
-% maxiter = 10;
-% s0 = 1i*linspace(0,10000,20);
-% 
-% [M, D, K, f, C] = fem_beam(1,10);
-% 
-% 
-% [Kr, Gr, Mr, Br, Cr, s, Vr] = SO_IRKA_SISO(K, D, M, f, C, s0, 'os', tol, maxiter);
 
 
 %% Global pMOR
@@ -224,7 +213,7 @@ ylabel('Displacement at load point')
 xlabel('Frequency (rad/s)')
 
 %Plot reponse using GLOBAL BASIS
-fig = figure('Name','Frequency response comparison');
+fig = figure('Name','Frequency response comparison up to global pMOR');
 set(fig,'defaulttextinterpreter','latex')
 semilogy(abs(s),abs(result_full), 'LineWidth', 6)
 hold on
@@ -234,7 +223,7 @@ semilogy(abs(s),abs(result_global), 'LineWidth', 2)
 xlim([0 10000])
 ylim([1e-8 1e-1])
 legend('Full', 'SO-IRKA', 'Global MOR')
-title('Harmonic response of a clamped plate')
+title('Frequency response comparison up to global pMOR')
 ylabel('Displacement at load point')
 xlabel('Frequency (rad/s)')
 
@@ -367,16 +356,16 @@ end
 
 
 %Plot reponse using INTERPOLATION OF LOCAL MATRICES
-fig = figure('Name','Frequency response using Local MOR');
+fig = figure('Name','Frequency response using local pMOR');
 set(fig,'defaulttextinterpreter','latex')
 semilogy(abs(s),abs(result_local(4,:))) %Row 5 contains result for L = 1 m
 xlim([0 10000])
 ylim([1e-8 1e-1])
-title('Global MOR')
+title('Local pMOR')
 ylabel('Displacement at load point')
 xlabel('Frequency (rad/s)')
 
-%Plot reponse using GLOBAL BASIS
+%Plot reponse using INTERPOLATION OF LOCAL MATRICES
 fig = figure('Name','Frequency response comparison inc. local');
 set(fig,'defaulttextinterpreter','latex')
 semilogy(abs(s),abs(result_full), 'LineWidth', 10)
@@ -389,7 +378,7 @@ semilogy(abs(s),abs(result_local(5,:)), 'LineWidth', 1)
 xlim([0 10000])
 ylim([1e-8 1e-1])
 legend('Full', 'SO-IRKA', 'Global MOR', 'Local MOR')
-title('Harmonic response of a clamped plate')
+title('Frequency response comparison inc. local pMOR')
 ylabel('Displacement at load point')
 xlabel('Frequency (rad/s)')
 
