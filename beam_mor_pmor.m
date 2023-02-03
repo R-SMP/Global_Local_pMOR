@@ -1,4 +1,4 @@
-clear all
+clear
 close all
 
 %Add SOIRKA to path
@@ -135,7 +135,7 @@ xlabel('Frequency (rad/s)')
 % Choose and initaliaze parameter space
 %Parameter is length, switch to height later
 
-P = [0.214 0.5 0.75 1 1.25]; 
+P = [0.214 0.5 0.75 0.9 1.25]; 
 %For some reason anything below 0.214 as a length does not allow the 
 % SO-IRKA algorithm to function properly.
 
@@ -189,7 +189,8 @@ V = (U(:,1:i));
 
 %Sample use case of global basis
 
-%Compute reduced system matrices for that certain parameter value
+%Compute reduced system matrices for that certain parameter value, 1
+%chosen here
 
 [M, D, K, f, C] = fem_beam(1,10);
 
@@ -246,7 +247,7 @@ xlabel('Frequency (rad/s)')
 % Choose and initaliaze parameter space
 %Parameter is length, switch to height later
 
-P = [0.214 0.5 0.75 1 1.25]; 
+P = [0.214 0.5 0.75 0.9 1.25];
 %For some reason anything below 0.214 as a length does not allow the 
 % SO-IRKA algorithm to function properly.
 
@@ -306,23 +307,97 @@ Cgp = [];
 
 for i = 1:k
 
-    Vrt  = V(:,((k-1)*r + 1):k*r);
+    Vrt  = V(:,((i-1)*r + 1):i*r);
     
-    T = inv(R'*V(:,((k-1)*r + 1):k*r));
+    T = inv(R'*V(:,((i-1)*r + 1):i*r));
 
-    M_tilde_k = Mp(:,((k-1)*r + 1 ):k*r);
-    D_tilde_k = T'*Dp(:,((k-1)*r + 1):k*r)*T;
-    K_tilde_k = T'*Kp(:,((k-1)*r + 1):k*r)*T;
-    f_tilde_k = T'*fp(:,k);
-    C_tilde_k = Cp(k,:);
+    M_tilde_k = Mp(:,((i-1)*r + 1):i*r);
+    D_tilde_k = T'*Dp(:,((i-1)*r + 1):i*r)*T;
+    K_tilde_k = T'*Kp(:,((i-1)*r + 1):i*r)*T;
+    f_tilde_k = T'*fp(:,i);
+    C_tilde_k = Cp(i,:);
 
     Mgp = [Mgp, M_tilde_k];
     Dgp = [Dgp, D_tilde_k];
     Kgp = [Kgp, K_tilde_k];
     fgp = [fgp, f_tilde_k];
     Cgp = [Cgp; C_tilde_k];
-% 
+
 end
+
+
+%Use cubic splines: get solution for each reduced and transformed matrix
+%for each element in the sampled parameter space, then interpolate between the
+%solutions.
+
+%Get solution for frequency range for each parameter value
+%Interpolate solution for each frequency range
+
+
+%Array with one row for each the solution for each parameter value, columns
+%are the frequency values
+result_interpolate = zeros(k,length(s));
+for j = 1:k
+    for i=1:length(s)
+        result_interpolate(j,i) = Cp(j,:) * ((s(i)^2*Mgp(:,((j-1)*r + 1):j*r) + s(i)*Dgp(:,((j-1)*r + 1):j*r) + Kgp(:,((j-1)*r + 1):j*r)) \ fp(:,j));
+        %Careful, s should be the initial frequency range, not the eigenvalues
+        %obtained from IRKA
+    end
+end
+
+%Parameter space for which we want interpolations, here we see the benefit
+%of increasing offline costs.
+p = [0.1 0.45 0.9 1.10 1 1.5];
+
+
+result_local = zeros(length(p),length(s));
+for j = 1:length(p)
+    for i=1:length(s) %s should not be involved in interpolation
+        
+        result_local(:,i) = spline(P,result_interpolate(:,i),p);
+        %result is interpolated for each frequency taking the parameter
+        %space as X and the result for that generalized coordinate system
+        %result as Y. Putting these together leads to complete interpolated
+        %version for entire frequency range for that certain parameter in
+        %from the p parameter range (range for which we want to obtain
+        %interpolated results). We do this for each parameter in p.
+
+    end
+end
+
+
+%Plot reponse using INTERPOLATION OF LOCAL MATRICES
+fig = figure('Name','Frequency response using Local MOR');
+set(fig,'defaulttextinterpreter','latex')
+semilogy(abs(s),abs(result_local(4,:))) %Row 5 contains result for L = 1 m
+xlim([0 10000])
+ylim([1e-8 1e-1])
+title('Global MOR')
+ylabel('Displacement at load point')
+xlabel('Frequency (rad/s)')
+
+%Plot reponse using GLOBAL BASIS
+fig = figure('Name','Frequency response comparison inc. local');
+set(fig,'defaulttextinterpreter','latex')
+semilogy(abs(s),abs(result_full), 'LineWidth', 10)
+hold on
+semilogy(abs(s),abs(result_irka), 'LineWidth', 7)
+hold on
+semilogy(abs(s),abs(result_global), 'LineWidth', 3)
+hold on
+semilogy(abs(s),abs(result_local(5,:)), 'LineWidth', 1)
+xlim([0 10000])
+ylim([1e-8 1e-1])
+legend('Full', 'SO-IRKA', 'Global MOR', 'Local MOR')
+title('Harmonic response of a clamped plate')
+ylabel('Displacement at load point')
+xlabel('Frequency (rad/s)')
+
+
+
+
+
+
 
 
 
