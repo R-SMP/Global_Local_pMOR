@@ -113,8 +113,7 @@ C(1,N*6-3)=1; % output: beam tip, +z
 % A = [zeros(6*N,6*N) F; -K -D] ;
 % B = [zeros(6*N,size(B,2)); B];
 % C = [C, zeros(size(C,1), 6*N)];
-% sys = dss(A,B,C,0,E); %Interesting, never dealt with state space models
-% before -- well you kind of have, actually, but for second order it gets a
-% bit harder, so we'll probably not want to deal with it here.
+% sys = dss(A,B,C,0,E); 
+% not required for our case
 
 end

@@ -17,8 +17,8 @@ end
 s = [s conj(s)];
 s = s(:);
 r = length(s);
-s = cplxpair(s); % sorts the elements along different dimensions of a complex array, grouping together complex conjugate pairs
-Vr = zeros(size(M,1),r); %r is the dimension of the number of expansion points we want to use
+s = cplxpair(s); % sorts the elements grouping together complex conjugate pairs
+Vr = zeros(size(M,1),r); % r is the number of expansion points to use
 Wr = zeros(size(M,1),r);
 
 %Alternative

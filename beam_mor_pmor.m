@@ -3,19 +3,20 @@ close all
 
 %Add SOIRKA to path
 addpath('soirka')
+%% Inputs
+numSamples = 1000; % number of frequency samples
 
 %Create beam model
 [M, D, K, f, C] = fem_beam(1,10);
 
 %% Compute full solution
 
-%I think C and o are the same or the very least they serve the same purpose,
-% they get the DOF corresponding to the displacement at the tip.
+% C and o are the same and serve the same purpose,
+% they get the DOF corresponding to the z-displacement at the tip.
 % o = sparse(1,length(f));
 % o(f~=0) = 1;
 
-%s = 1i*linspace(0,10000,100);
-s = 1i*logspace(0,4,100);
+s = 1i*logspace(0,4,numSamples); % frequency sample values
 %Careful with logspace, it might lead to very high values if used
 %incorrectly
 
@@ -23,11 +24,10 @@ result_full = zeros(1,length(s));
 
 tic
 for ii=1:length(s)
-    ii;
     result_full(ii) = C * ((s(ii)^2*M + s(ii)*D + K) \ f);
 end
 ctime_full = toc;
-
+fprintf("full:" + ctime_full);
 
 %Plot full response
 fig = figure('Name','Frequency response, full solution');
@@ -42,16 +42,16 @@ xlabel('Frequency (rad/s)')
 
 %% Compute SO-IRKA solution using algorithm implementation from Exericse 3.2
 
-%s = 1i*linspace(0,10000,100);
-s = 1i*logspace(0,4,100);
+s = 1i*logspace(0,4,numSamples);
 
 %We can change the "r" here, we have chosen r = 20
-s0 = 1i*linspace(0,10000,20); 
+r = 20;
+s0 = 1i*linspace(0,10000,r); 
 %s0 = 1i*logspace(0,4,5);
 
 %IRKA iteration parameters
-tol = 1e-10;
-maxiter = 10;
+tol = 1e-10; % tolerance
+maxiter = 10; % number of maximum iterations
 
 tic
 
@@ -67,9 +67,11 @@ tic
 %the same amount of time.
 % SO-IRKA-SISO.m"
 
+% generate reduced-order beam model
 [Kr, Dr, Mr, fr, Cr, sr] = SO_IRKA_SISO(K, D, M, f, C, s0, 'os', tol, maxiter);
 
 ctime_irka_offline = toc;
+fprintf("offline:" + ctime_irka_offline);
 
 tic
 result_irka = zeros(1,length(s));
@@ -79,6 +81,7 @@ for ii=1:length(s)
     %obtained from IRKA
 end
 ctime_irka_online = toc;
+fprintf("irka:" + ctime_irka_online);
 
 %IRKA error calculations
 error_irka = (result_full - result_irka)./result_full;
@@ -122,9 +125,10 @@ xlabel('Frequency (rad/s)')
 %% Global pMOR
 
 % Choose and initaliaze parameter space
-%Parameter is length, switch to height later
+% Parameter is length, switch to height later
 
-P = [0.214 0.5 0.75 0.9 1.25]; 
+%P = [0.214 0.5 0.75 0.9 1.25]; %original
+P = [0.214 0.3 0.4 0.5 0.6 0.75 0.9 1.25]; 
 %For some reason anything below 0.214 as a length does not allow the 
 % SO-IRKA algorithm to function properly.
 
@@ -145,7 +149,7 @@ for i = 1:k
     %Obtain basis matrix for that parameter
     [~, ~, ~, ~, ~, ~, Vr] = SO_IRKA_SISO(K, D, M, f, C, s0, 'os', tol, maxiter);
 
-    %Concatenate
+    %Concatenate reduced bases
     V = [V, Vr];
         
 end
@@ -157,24 +161,18 @@ for i = 1:size(S,1)
     
     if S(i,i) < 1e-10
 
-        cull = i;
+        redIndex = i; % index beyond which eigenvalues are small enough to be neglected 
+        % equivalent to reduced dimension of reduced global basis
         break
 
     end
 
 end
+U = U(:, 1:redIndex);
+S = S(1:redIndex, 1:redIndex);
+Vsd = Vsd(1:redIndex, 1:redIndex);
 
-% S(S<1e-10) = 0;
-% 
-% V = U*S*Vsd';
-
-%Final global basis %Not sure how I should be gettin it from here
-
-%V(:,i:end) = [];
-
-V = (U(:,1:i));
-
-%[U, S, Vsd] = svd(V);
+V = U*S*Vsd'; % reduced global bases 
 
 %Sample use case of global basis
 
@@ -189,11 +187,12 @@ Kr = V' * K * V;
 fr = V' * f;
 Cr = C * V;
 
-s = 1i*logspace(0,4,100); %Some trouble somewhere
+s = 1i*logspace(0,4,numSamples); 
 
 result_global = zeros(1,length(s));
 for ii=1:length(s)
-    result_global(ii) = Cr * ((s(ii)^2*Mr + s(ii)*Dr + Kr) \ fr);
+    lhs = s(ii)^2*Mr + s(ii)*Dr + Kr;
+    result_global(ii) = Cr * (lhs \ fr);
     %Careful, s should be the initial frequency range, not the eigenvalues
     %obtained from IRKA
 end
@@ -231,7 +230,7 @@ xlabel('Frequency (rad/s)')
 
 
 
-%% pMOR
+%% Local pMOR
 
 % Choose and initaliaze parameter space
 %Parameter is length, switch to height later
@@ -242,15 +241,15 @@ P = [0.214 0.5 0.75 0.9 1.25];
 
 tol = 1e-10;
 maxiter = 10;
-s0 = 1i*linspace(0,10000,5); %r = 5 then
+s0 = 1i*linspace(0,10000,5); %r = 5
 
 %Loop over the parameter space
 k = length(P);
 
 V = []; %Not sure if this is effective or if preallocating would be better
 
-%These matrices will store the reduced system matrices for each parameter
-%value
+%These matrices will store the reduced system matrices for all parameter
+%values
 Mp = [];
 Dp = [];
 Kp = [];
@@ -261,9 +260,6 @@ for i = 1:k
     
     %Create model matrices for that parameter
     [M, D, K, f, C] = fem_beam(P(i),10);
-
-    %Mp = [Mp, Mr];
-
 
     %Obtain basis matrix and reduced system matrices for that parameter
     [Kr, Dr, Mr, fr, Cr, sr, Vr] = SO_IRKA_SISO(K, D, M, f, C, s0, 'os', tol, maxiter);
@@ -283,7 +279,7 @@ end
 [U, S, Vsd] = svd(V);
 
 r = 2*length(s0); %Remember the SO-IRKA algorithm doubles r
-
+%r = 24;
 R = U(:,1:r);
 
 %Transform reduced system matrices to generalized coordinate system R
@@ -295,14 +291,15 @@ fgp = [];
 Cgp = [];
 
 for i = 1:k
-
-    Vrt  = V(:,((i-1)*r + 1):i*r);
     
-    T = inv(R'*V(:,((i-1)*r + 1):i*r));
+    Vk_indices = (i-1)*r + 1 : i*r;
+    Vk  = V(:,Vk_indices);
+    
+    T = inv(R'*Vk); % transformation matrix
 
-    M_tilde_k = Mp(:,((i-1)*r + 1):i*r);
-    D_tilde_k = T'*Dp(:,((i-1)*r + 1):i*r)*T;
-    K_tilde_k = T'*Kp(:,((i-1)*r + 1):i*r)*T;
+    M_tilde_k = T'*Mp(:,Vk_indices)*T;
+    D_tilde_k = T'*Dp(:,Vk_indices)*T;
+    K_tilde_k = T'*Kp(:,Vk_indices)*T;
     f_tilde_k = T'*fp(:,i);
     C_tilde_k = Cp(i,:);
 
@@ -328,16 +325,17 @@ end
 result_interpolate = zeros(k,length(s));
 for j = 1:k
     for i=1:length(s)
-        result_interpolate(j,i) = Cp(j,:) * ((s(i)^2*Mgp(:,((j-1)*r + 1):j*r) + s(i)*Dgp(:,((j-1)*r + 1):j*r) + Kgp(:,((j-1)*r + 1):j*r)) \ fp(:,j));
+        gk_indices = (j-1)*r + 1 : j*r; % indices corresponding to generalized k-th basis
+        result_interpolate(j,i) = Cgp(j,:) * ((s(i)^2*Mgp(:,gk_indices) + s(i)*Dgp(:,gk_indices) + Kgp(:,gk_indices)) \ fgp(:,j));
         %Careful, s should be the initial frequency range, not the eigenvalues
         %obtained from IRKA
     end
 end
 
+
 %Parameter space for which we want interpolations, here we see the benefit
 %of increasing offline costs.
-p = [0.1 0.45 0.9 1.10 1 1.5];
-
+p = [0.1 0.45 0.9 1 1.1 1.5];
 
 result_local = zeros(length(p),length(s));
 for j = 1:length(p)
@@ -358,14 +356,14 @@ end
 %Plot reponse using INTERPOLATION OF LOCAL MATRICES
 fig = figure('Name','Frequency response using local pMOR');
 set(fig,'defaulttextinterpreter','latex')
-semilogy(abs(s),abs(result_local(4,:))) %Row 5 contains result for L = 1 m
+semilogy(abs(s),abs(result_local(4,:))) % Row 4 contains result for L = 1 m
 xlim([0 10000])
 ylim([1e-8 1e-1])
 title('Local pMOR')
 ylabel('Displacement at load point')
 xlabel('Frequency (rad/s)')
 
-%Plot reponse using INTERPOLATION OF LOCAL MATRICES
+%Plot reponse comparisons among all methods
 fig = figure('Name','Frequency response comparison inc. local');
 set(fig,'defaulttextinterpreter','latex')
 semilogy(abs(s),abs(result_full), 'LineWidth', 10)
@@ -374,31 +372,11 @@ semilogy(abs(s),abs(result_irka), 'LineWidth', 7)
 hold on
 semilogy(abs(s),abs(result_global), 'LineWidth', 3)
 hold on
-semilogy(abs(s),abs(result_local(5,:)), 'LineWidth', 1)
+semilogy(abs(s),abs(result_local(4,:)), 'LineWidth', 1)
 xlim([0 10000])
 ylim([1e-8 1e-1])
 legend('Full', 'SO-IRKA', 'Global MOR', 'Local MOR')
 title('Frequency response comparison inc. local pMOR')
 ylabel('Displacement at load point')
 xlabel('Frequency (rad/s)')
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
