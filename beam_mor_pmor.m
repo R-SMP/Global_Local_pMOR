@@ -158,19 +158,19 @@ end
 [U, S, Vsd] = svd(V);
 
 for i = 1:size(S,1)
-    
-    if S(i,i) < 1e-10
 
-        redIndex = i; % index beyond which eigenvalues are small enough to be neglected 
+    if S(i,i) < 10e-3
+
+        r_index = i; % index beyond which eigenvalues are small enough to be neglected 
         % equivalent to reduced dimension of reduced global basis
         break
 
     end
 
 end
-U = U(:, 1:redIndex);
-S = S(1:redIndex, 1:redIndex);
-Vsd = Vsd(1:redIndex, 1:redIndex);
+U = U(:, 1:r_index);
+S = S(1:r_index, 1:r_index);
+Vsd = Vsd(1:r_index, 1:r_index);
 
 V = U*S*Vsd'; % reduced global bases 
 
@@ -235,7 +235,8 @@ xlabel('Frequency (rad/s)')
 % Choose and initaliaze parameter space
 %Parameter is length, switch to height later
 
-P = [0.214 0.5 0.75 0.9 1.25];
+%P = [0.214 0.5 0.75 0.9 1.25];
+P = [0.1 0.214 0.3 0.4 0.5 0.6 0.75 0.9 1.25]; 
 %For some reason anything below 0.214 as a length does not allow the 
 % SO-IRKA algorithm to function properly.
 
@@ -279,7 +280,6 @@ end
 [U, S, Vsd] = svd(V);
 
 r = 2*length(s0); %Remember the SO-IRKA algorithm doubles r
-%r = 24;
 R = U(:,1:r);
 
 %Transform reduced system matrices to generalized coordinate system R
@@ -295,13 +295,13 @@ for i = 1:k
     Vk_indices = (i-1)*r + 1 : i*r;
     Vk  = V(:,Vk_indices);
     
-    T = inv(R'*Vk); % transformation matrix
+    T = inv(R' * Vk); % transformation matrix
 
-    M_tilde_k = T'*Mp(:,Vk_indices)*T;
-    D_tilde_k = T'*Dp(:,Vk_indices)*T;
-    K_tilde_k = T'*Kp(:,Vk_indices)*T;
-    f_tilde_k = T'*fp(:,i);
-    C_tilde_k = Cp(i,:);
+    M_tilde_k = T' * Mp(:,Vk_indices)*T;
+    D_tilde_k = T' * Dp(:,Vk_indices)*T;
+    K_tilde_k = T' * Kp(:,Vk_indices)*T;
+    f_tilde_k = T' * fp(:,i);
+    C_tilde_k = Cp(i,:) * T;
 
     Mgp = [Mgp, M_tilde_k];
     Dgp = [Dgp, D_tilde_k];
@@ -311,52 +311,67 @@ for i = 1:k
 
 end
 
+%---------  INTERPOLATION  ---------%
+Mf = zeros(r);
+Kf = zeros(r);
+Df = zeros(r);
+ff = zeros(r,1);
+Cf = zeros(1,r);
+p = 1.0; % parameter for which interpolation is required, here L = 1m
+numParam = length(P);
 
-%Use cubic splines: get solution for each reduced and transformed matrix
-%for each element in the sampled parameter space, then interpolate between the
-%solutions.
+%Use cubic splines: interpolate between the reduced and transformed
+%matrices to get the final system matrices corresponding to parameter 'p'
+%This needs to be done element-wise
 
-%Get solution for frequency range for each parameter value
-%Interpolate solution for each frequency range
+%Get solution for frequency range for that parameter value by solving the
+%final system
 
+for i = 1:r
 
-%Array with one row for each the solution for each parameter value, columns
-%are the frequency values
-result_interpolate = zeros(k,length(s));
-for j = 1:k
-    for i=1:length(s)
-        gk_indices = (j-1)*r + 1 : j*r; % indices corresponding to generalized k-th basis
-        result_interpolate(j,i) = Cgp(j,:) * ((s(i)^2*Mgp(:,gk_indices) + s(i)*Dgp(:,gk_indices) + Kgp(:,gk_indices)) \ fgp(:,j));
-        %Careful, s should be the initial frequency range, not the eigenvalues
-        %obtained from IRKA
+    % My, Dy, Ky, fy, Cy are vectors with matrix elements corresponding to parameters in P 
+    fy = fgp(i,:);
+    ff(i) = spline(P,fy,p);
+    Cy = Cgp(:,i);
+    Cf(i) = spline(P',Cy,p);
+
+    My = zeros(1,numParam);
+    Ky = zeros(1,numParam);
+    Dy = zeros(1,numParam);
+    
+    % matrices are symmetric so interpolation is required only for the lower
+    % triangular part
+    for j = 1:i 
+       
+        for iParam = 1:numParam
+            colIndex = (iParam-1)*r + j;
+            My(iParam) = Mgp(i,colIndex);
+            Ky(iParam) = Kgp(i,colIndex);
+            Dy(iParam) = Dgp(i,colIndex);
+        end
+
+        Mf(i,j) = spline(P,My,p);
+        Kf(i,j) = spline(P,Ky,p);
+        Df(i,j) = spline(P,Dy,p);
+    
     end
 end
 
+% Obtain the final symmetric system matrices
+Mf = Mf + transpose(tril(Mf, -1));
+Kf = Kf + transpose(tril(Kf, -1));
+Df = Df + transpose(tril(Df, -1));
 
-%Parameter space for which we want interpolations, here we see the benefit
-%of increasing offline costs.
-p = [0.1 0.45 0.9 1 1.1 1.5];
-
-result_local = zeros(length(p),length(s));
-for j = 1:length(p)
-    for i=1:length(s) %s should not be involved in interpolation
-        
-        result_local(:,i) = spline(P,result_interpolate(:,i),p);
-        %result is interpolated for each frequency taking the parameter
-        %space as X and the result for that generalized coordinate system
-        %result as Y. Putting these together leads to complete interpolated
-        %version for entire frequency range for that certain parameter in
-        %from the p parameter range (range for which we want to obtain
-        %interpolated results). We do this for each parameter in p.
-
-    end
+% Solve the final system model 
+result_local = zeros(1, length(s));
+for i = 1:length(s)
+   result_local(i) = Cf * ((s(i)^2*Mf + s(i)*Df + Kf) \ ff);
 end
-
 
 %Plot reponse using INTERPOLATION OF LOCAL MATRICES
 fig = figure('Name','Frequency response using local pMOR');
 set(fig,'defaulttextinterpreter','latex')
-semilogy(abs(s),abs(result_local(4,:))) % Row 4 contains result for L = 1 m
+semilogy(abs(s),abs(result_local))
 xlim([0 10000])
 ylim([1e-8 1e-1])
 title('Local pMOR')
@@ -366,13 +381,13 @@ xlabel('Frequency (rad/s)')
 %Plot reponse comparisons among all methods
 fig = figure('Name','Frequency response comparison inc. local');
 set(fig,'defaulttextinterpreter','latex')
-semilogy(abs(s),abs(result_full), 'LineWidth', 10)
+semilogy(abs(s),abs(result_full),'LineWidth', 7)
 hold on
-semilogy(abs(s),abs(result_irka), 'LineWidth', 7)
+semilogy(abs(s),abs(result_irka),'LineWidth', 5)
 hold on
-semilogy(abs(s),abs(result_global), 'LineWidth', 3)
+semilogy(abs(s),abs(result_global),'LineWidth', 3)
 hold on
-semilogy(abs(s),abs(result_local(4,:)), 'LineWidth', 1)
+semilogy(abs(s),abs(result_local),'LineWidth', 1)
 xlim([0 10000])
 ylim([1e-8 1e-1])
 legend('Full', 'SO-IRKA', 'Global MOR', 'Local MOR')
