@@ -7,9 +7,9 @@ addpath('soirka')
 numSamples = 1000; % number of frequency samples
 numElements = 100; % number of beam FEM elements
 height = 0.01;
-
+L = 1; % length of beam
 %Create beam model
-[M, D, K, f, C] = fem_beam(1,height,numElements);
+[M, D, K, f, C] = fem_beam(L,height,numElements);
 
 %% Compute full solution
 
@@ -181,7 +181,7 @@ V = U*S*Vsd'; % reduced global bases
 %Compute reduced system matrices for that certain parameter value, 1
 %chosen here
 
-[M, D, K, f, C] = fem_beam(1,height,numElements);
+[M, D, K, f, C] = fem_beam(L,height,numElements);
 
 Mr = V' * M * V;
 Dr = V' * D * V;
@@ -266,10 +266,7 @@ xlabel('Frequency (rad/s)')
 % Choose and initaliaze parameter space
 %Parameter is length, switch to height later
 
-%P = [0.214 0.5 0.75 0.9 1.25];
-P = [0.1 0.214 0.3 0.4 0.5 0.6 0.75 0.9 1.25]; 
-%For some reason anything below 0.214 as a length does not allow the 
-% SO-IRKA algorithm to function properly.
+P = [0.214 0.3 0.4 0.5 0.6 0.75 0.9 1.25]; 
 
 tol = 1e-10;
 maxiter = 10;
@@ -350,7 +347,7 @@ Kf = zeros(r);
 Df = zeros(r);
 ff = zeros(r,1);
 Cf = zeros(1,r);
-p = 1.0; % parameter for which interpolation is required, here L = 1m
+p = L; % parameter for which interpolation is required, here L = 1m
 numParam = length(P);
 
 %Use cubic splines: interpolate between the reduced and transformed
@@ -420,13 +417,13 @@ xlabel('Frequency (rad/s)')
 %Plot reponse comparisons among all methods
 fig = figure('Name','Frequency response comparison inc. local');
 set(fig,'defaulttextinterpreter','latex')
-semilogy(abs(s),abs(result_full),'LineWidth', 7)
+semilogy(abs(s),abs(result_full),'-')%'LineWidth', 7)
 hold on
-semilogy(abs(s),abs(result_irka),'LineWidth', 5)
+semilogy(abs(s),abs(result_irka),':')%'LineWidth', 5)
 hold on
-semilogy(abs(s),abs(result_global),'LineWidth', 3)
+semilogy(abs(s),abs(result_global),'-.')%'LineWidth', 3)
 hold on
-semilogy(abs(s),abs(result_local),'LineWidth', 1)
+semilogy(abs(s),abs(result_local),'--')%'LineWidth', 1)
 xlim([0 10000])
 ylim([1e-8 1e-1])
 legend('Full', 'SO-IRKA', 'GLOBAL pMOR', 'LOCAL pMOR')
