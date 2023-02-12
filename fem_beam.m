@@ -1,5 +1,5 @@
 
-function [M, D, K, B, C] = fem_beam(L,N)
+function [M, D, K, B, C] = fem_beam(L,h,N)
 % Generates a FEM model of a 3D cantilever Timoshenko beam
 % Replace arbitrarily many of the preset parameters by inputs to the file!
 %
@@ -21,7 +21,7 @@ function [M, D, K, B, C] = fem_beam(L,N)
 % (input) L: total beam length (x) [m]
 % N = 10 %number of elements [1] %Has been changed to be an input
 t = .01; % t: beam thickness (y) [m]
-h = .01; % h: beam height (z) [m]
+%h = .01; % h: beam height (z) [m]
 rho = 7850; % density of steel [kg/m^3]
 m = L*t*h*rho; % m: total beam mass [kg]
 E = 210e9; % E: Young's modulus of steel [N/m^2]
