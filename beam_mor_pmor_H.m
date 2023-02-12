@@ -6,10 +6,11 @@ addpath('soirka')
 %% Inputs
 numSamples = 1000; % number of frequency samples
 numElements = 50; % number of beam FEM elements
-height = 0.01;
+height = 0.5;
+length_beam = 1;
 
 %Create beam model
-[M, D, K, f, C] = fem_beam(1,height,numElements);
+[M, D, K, f, C] = fem_beam(length_beam,height,numElements);
 
 %% Compute full solution
 
@@ -21,6 +22,8 @@ height = 0.01;
 s = 1i*logspace(0,4,numSamples); % frequency sample values
 %Careful with logspace, it might lead to very high values if used
 %incorrectly
+
+
 
 result_full = zeros(1,length(s));
 
@@ -36,7 +39,7 @@ fig = figure('Name','Frequency response using full solution');
 set(fig,'defaulttextinterpreter','latex')
 semilogy(abs(s),abs(result_full))
 xlim([0 10000])
-ylim([1e-8 1e-1])
+ylim([1e-12 1e-0])
 title('Frequency response using full solution')
 ylabel('Displacement at load point')
 xlabel('Frequency (rad/s)')
@@ -93,7 +96,7 @@ fig = figure('Name','Frequency response using SO-IRKA');
 set(fig,'defaulttextinterpreter','latex')
 semilogy(abs(s),abs(result_irka))
 xlim([0 10000])
-ylim([1e-8 1e-1])
+ylim([1e-12 1e-0])
 title('Frequency response using SO-IRKA')
 ylabel('Displacement at load point')
 xlabel('Frequency (rad/s)')
@@ -105,7 +108,7 @@ subplot(2,1,1)
 semilogy(abs(s),abs(result_full),...
     abs(s),abs(result_irka))
 xlim([0 10000])
-ylim([1e-8 1e-1])
+ylim([1e-12 1e-0])
 legend('Full system', 'Reduced System (SO-IRKA)')
 title('Comparison of full and reduced models')
 ylabel('Displacement at load point')
@@ -131,7 +134,9 @@ xlabel('Frequency (rad/s)')
 % Parameter is length, switch to height later
 
 %P = [0.214 0.5 0.75 0.9 1.25]; %original
-P = [0.214 0.3 0.4 0.5 0.6 0.75 0.9 1.25]; 
+%P = [0.214 0.3 0.4 0.5 0.6 0.75 0.9 1.25];
+
+P = [0.02 0.03 0.04 0.05 0.06 0.07 0.08 1.2];
 %For some reason anything below 0.214 as a length does not allow the 
 % SO-IRKA algorithm to function properly.
 
@@ -149,7 +154,7 @@ V = []; %Not sure if this is effective or if preallocating would be better
 for i = 1:k
     
     %Create model matrices for that parameter
-    [M, D, K, f, C] = fem_beam(P(i),height,numElements);
+    [M, D, K, f, C] = fem_beam(length_beam,P(i),numElements);
 
     %Obtain basis matrix for that parameter
     [~, ~, ~, ~, ~, ~, Vr] = SO_IRKA_SISO(K, D, M, f, C, s0, 'os', tol, maxiter);
@@ -181,10 +186,10 @@ V = U*S*Vsd'; % reduced global bases
 
 %Sample use case of global basis
 
-%Compute reduced system matrices for that certain parameter value, 1
+%Compute reduced system matrices for that certain height value, 0.1
 %chosen here
 
-[M, D, K, f, C] = fem_beam(1,height,numElements);
+[M, D, K, f, C] = fem_beam(length_beam,height,numElements);
 
 Mr = V' * M * V;
 Dr = V' * D * V;
@@ -215,8 +220,8 @@ fig = figure('Name','Frequency response using Global pMOR');
 set(fig,'defaulttextinterpreter','latex')
 semilogy(abs(s),abs(result_global))
 xlim([0 10000])
-ylim([1e-8 1e-1])
-title('Frequency response using GLOBAL pMOR')
+ylim([1e-12 1e-0])
+title('Frequency response using Global pMOR')
 ylabel('Displacement at load point')
 xlabel('Frequency (rad/s)')
 
@@ -229,8 +234,8 @@ semilogy(abs(s),abs(result_irka), 'LineWidth', 4)
 hold on
 semilogy(abs(s),abs(result_global), 'LineWidth', 2)
 xlim([0 10000])
-ylim([1e-8 1e-1])
-legend('Full', 'SO-IRKA', 'GLOBAL pMOR')
+ylim([1e-12 1e-0])
+legend('Full', 'SO-IRKA', 'Global pMOR')
 title('Frequency response comparison including Global pMOR')
 ylabel('Displacement at load point')
 xlabel('Frequency (rad/s)')
@@ -242,7 +247,7 @@ subplot(2,1,1)
 semilogy(abs(s),abs(result_full),...
     abs(s),abs(result_global))
 xlim([0 10000])
-ylim([1e-8 1e-1])
+ylim([1e-12 1e-0])
 legend('Full system', 'Reduced System (GLOBAL pMOR)')
 title('Comparison of full and reduced models')
 ylabel('Displacement at load point')
@@ -270,7 +275,8 @@ xlabel('Frequency (rad/s)')
 %Parameter is length, switch to height later
 
 %P = [0.214 0.5 0.75 0.9 1.25];
-P = [0.1 0.214 0.3 0.4 0.5 0.6 0.75 0.9 1.25]; 
+%P = [0.1 0.214 0.3 0.4 0.5 0.6 0.75 0.9 1.25];
+P = [0.02 0.03 0.04 0.05 0.06 0.07 0.08 1.2];
 %For some reason anything below 0.214 as a length does not allow the 
 % SO-IRKA algorithm to function properly.
 
@@ -296,7 +302,7 @@ Cp = [];
 for i = 1:k
     
     %Create model matrices for that parameter
-    [M, D, K, f, C] = fem_beam(P(i),height,numElements);
+    [M, D, K, f, C] = fem_beam(length_beam,P(i),numElements);
 
     %Obtain basis matrix and reduced system matrices for that parameter
     [Kr, Dr, Mr, fr, Cr, sr, Vr] = SO_IRKA_SISO(K, D, M, f, C, s0, 'os', tol, maxiter);
@@ -353,7 +359,7 @@ Kf = zeros(r);
 Df = zeros(r);
 ff = zeros(r,1);
 Cf = zeros(1,r);
-p = 1.0; % parameter for which interpolation is required, here L = 1m
+p = height; % parameter for which interpolation is required, here H = 0.1m
 numParam = length(P);
 
 %Use cubic splines: interpolate between the reduced and transformed
@@ -415,7 +421,7 @@ fig = figure('Name','Frequency response using local pMOR');
 set(fig,'defaulttextinterpreter','latex')
 semilogy(abs(s),abs(result_local))
 xlim([0 10000])
-ylim([1e-8 1e-1])
+ylim([1e-12 1e-0])
 title('Frequency response using Local pMOR')
 ylabel('Displacement at load point')
 xlabel('Frequency (rad/s)')
@@ -431,8 +437,8 @@ semilogy(abs(s),abs(result_global),'LineWidth', 3)
 hold on
 semilogy(abs(s),abs(result_local),'LineWidth', 1)
 xlim([0 10000])
-ylim([1e-8 1e-1])
-legend('Full', 'SO-IRKA', 'GLOBAL pMOR', 'LOCAL pMOR')
+ylim([1e-12 1e-0])
+legend('Full', 'SO-IRKA', 'Global pMOR', 'Local pMOR')
 title('Frequency response comparison inc. Local pMOR')
 ylabel('Displacement at load point')
 xlabel('Frequency (rad/s)')
@@ -448,7 +454,7 @@ subplot(2,1,1)
 semilogy(abs(s),abs(result_full),...
     abs(s),abs(result_local))
 xlim([0 10000])
-ylim([1e-8 1e-1])
+ylim([1e-12 1e-0])
 legend('Full system', 'Reduced System (LOCAL pMOR)')
 title('Comparison of full and reduced models')
 ylabel('Displacement at load point')
@@ -615,7 +621,7 @@ xlabel('Frequency (rad/s)')
 % % set(fig,'defaulttextinterpreter','latex')
 % % semilogy(abs(s),abs(result_local))
 % % xlim([0 10000])
-% % ylim([1e-8 1e-1])
+% % ylim([1e-12 1e-0])
 % % title('Local pMOR')
 % % ylabel('Displacement at load point')
 % % xlabel('Frequency (rad/s)')
@@ -631,8 +637,8 @@ xlabel('Frequency (rad/s)')
 % % hold on
 % % semilogy(abs(s),abs(result_local),'LineWidth', 1)
 % % xlim([0 10000])
-% % ylim([1e-8 1e-1])
-% % legend('Full', 'SO-IRKA', 'GLOBAL pMOR', 'LOCAL pMOR')
+% % ylim([1e-12 1e-0])
+% % legend('Full', 'SO-IRKA', 'Global pMOR', 'LOCAL pMOR')
 % % title('Frequency response comparison inc. local pMOR')
 % % ylabel('Displacement at load point')
 % % xlabel('Frequency (rad/s)')
@@ -648,7 +654,7 @@ xlabel('Frequency (rad/s)')
 % % semilogy(abs(s),abs(result_full),...
 % %     abs(s),abs(result_local))
 % % xlim([0 10000])
-% % ylim([1e-8 1e-1])
+% % ylim([1e-12 1e-0])
 % % legend('Full system', 'Reduced System (LOCAL pMOR)')
 % % title('Comparison of full and reduced models')
 % % ylabel('Displacement at load point')
@@ -656,7 +662,7 @@ xlabel('Frequency (rad/s)')
 % % semilogy(abs(s),abs(error_global))
 % % xlim([0 10000])
 % % ylim([1e-12 100])
-% % legend('Reduced system error (GLOBAL pMOR)',...
+% % legend('Reduced system error (GLOBAL MOR)',...
 % %     'Location','northeast')
 % % ylabel('Relative approximation error')
 % % xlabel('Frequency (rad/s)')
@@ -672,7 +678,7 @@ xlabel('Frequency (rad/s)')
 % end
 % 
 % xlim([0 10000])
-% ylim([1e-8 1e-1])
+% ylim([1e-12 1e-0])
 % %S = sprintf('%.2f',p(1:length(p)));
 % S = sprintf('L = %0.2f*', p(1:length(p)));
 % C = regexp(S, '*', 'split');
