@@ -5,7 +5,7 @@ close all
 addpath('soirka')
 %% Inputs
 numSamples = 1000; % number of frequency samples
-numElements = 50; % number of beam FEM elements
+numElements = 100; % number of beam FEM elements
 height = 0.01;
 
 %Create beam model
@@ -130,10 +130,7 @@ xlabel('Frequency (rad/s)')
 % Choose and initaliaze parameter space
 % Parameter is length, switch to height later
 
-%P = [0.214 0.5 0.75 0.9 1.25]; %original
 P = [0.214 0.3 0.4 0.5 0.6 0.75 0.9 1.25]; 
-%For some reason anything below 0.214 as a length does not allow the 
-% SO-IRKA algorithm to function properly.
 
 tol = 1e-10;
 maxiter = 10;
@@ -144,7 +141,7 @@ tic
 %Loop over the parameter space
 k = length(P);
 
-V = []; %Not sure if this is effective or if preallocating would be better
+V = []; 
 
 for i = 1:k
     
@@ -164,7 +161,7 @@ end
 
 for i = 1:size(S,1)
 
-    if S(i,i) < 10e-3
+    if S(i,i) < 1e-3
 
         r_index = i; % index beyond which eigenvalues are small enough to be neglected 
         % equivalent to reduced dimension of reduced global basis
