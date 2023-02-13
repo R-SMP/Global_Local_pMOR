@@ -5,7 +5,7 @@ close all
 addpath('soirka')
 %% Inputs
 numSamples = 1000; % number of frequency samples
-numElements = 50; % number of beam FEM elements
+numElements = 100; % number of beam FEM elements
 height = 0.01;
 L = 1; % length of beam
 %Create beam model
