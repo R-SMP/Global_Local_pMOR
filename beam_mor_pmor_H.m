@@ -6,7 +6,7 @@ addpath('soirka')
 %% Inputs
 numSamples = 1000; % number of frequency samples
 numElements = 50; % number of beam FEM elements
-height = 0.5;
+height = 0.01;
 length_beam = 1;
 
 %Create beam model
@@ -429,15 +429,15 @@ xlabel('Frequency (rad/s)')
 %Plot reponse comparisons among all methods
 fig = figure('Name','Frequency response comparison inc. local');
 set(fig,'defaulttextinterpreter','latex')
-semilogy(abs(s),abs(result_full),'LineWidth', 7)
+semilogy(abs(s),abs(result_full),'-')%'LineWidth', 7)
 hold on
-semilogy(abs(s),abs(result_irka),'LineWidth', 5)
+semilogy(abs(s),abs(result_irka),':')%'LineWidth', 5)
 hold on
-semilogy(abs(s),abs(result_global),'LineWidth', 3)
+semilogy(abs(s),abs(result_global),'-.')%'LineWidth', 3)
 hold on
-semilogy(abs(s),abs(result_local),'LineWidth', 1)
+semilogy(abs(s),abs(result_local),'--')%'LineWidth', 1)
 xlim([0 10000])
-ylim([1e-12 1e-0])
+ylim([1e-7 1e-1])
 legend('Full', 'SO-IRKA', 'Global pMOR', 'Local pMOR')
 title('Frequency response comparison inc. Local pMOR')
 ylabel('Displacement at load point')
@@ -454,7 +454,7 @@ subplot(2,1,1)
 semilogy(abs(s),abs(result_full),...
     abs(s),abs(result_local))
 xlim([0 10000])
-ylim([1e-12 1e-0])
+ylim([1e-7 1e-1])
 legend('Full system', 'Reduced System (LOCAL pMOR)')
 title('Comparison of full and reduced models')
 ylabel('Displacement at load point')
